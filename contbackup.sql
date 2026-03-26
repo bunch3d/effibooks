@@ -103,3 +103,57 @@ SELECT table_name
 FROM information_schema.tables
 WHERE table_schema = 'public'
 ORDER BY table_name;
+
+
+CREATE TABLE IF NOT EXISTS merchants (
+
+  -- Primary key — use UUID (not serial int) so IDs are safe to expose in URLs
+  id                  UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- The shop's .myshopify.com domain — our primary identifier for a store.
+  -- UNIQUE constraint ensures one merchant record per store (handles re-installs).
+  shopify_domain      VARCHAR(255)  NOT NULL UNIQUE,
+
+  -- AES-256-GCM encrypted access token.
+  -- Format stored: "iv_hex:auth_tag_hex:ciphertext_hex"
+  -- NEVER store plaintext. See lib/db.js for encrypt/decrypt functions.
+  access_token        TEXT          NOT NULL,
+
+  -- Human-readable store name (e.g., "Sunday Best Apparel")
+  -- Pulled from /admin/api/shop.json after OAuth completes.
+  shop_name           VARCHAR(255),
+
+  -- Primary contact email for the store
+  shop_email          VARCHAR(255),
+
+  -- Store's default currency (e.g., "USD", "GBP", "EUR")
+  currency            VARCHAR(10)   DEFAULT 'USD',
+
+  -- Tracks where the merchant is in the onboarding funnel.
+  -- Drives the UI: which step to show next (Stripe, Ads, etc.)
+  onboarding_status   VARCHAR(50)   NOT NULL DEFAULT 'SHOPIFY_CONNECTED'
+                      CHECK (onboarding_status IN (
+                        'SHOPIFY_CONNECTED',  -- ← OAuth done, Stripe not yet connected
+                        'STRIPE_PENDING',     -- ← Stripe flow started but not complete
+                        'STRIPE_CONNECTED',   -- ← Stripe done, Ads not yet connected
+                        'ADS_PENDING',
+                        'ADS_CONNECTED',
+                        'ONBOARDING_COMPLETE' -- ← All integrations done, briefing active
+                      )),
+
+  -- When this record was first created (first install)
+  created_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+
+  -- Last update time — useful for debugging and cache invalidation
+  updated_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+
+);
+
+-- Index on shopify_domain for fast lookups during OAuth callbacks
+CREATE INDEX IF NOT EXISTS idx_merchants_shopify_domain
+  ON merchants (shopify_domain);
+
+-- Index on onboarding_status for filtering in admin dashboards
+CREATE INDEX IF NOT EXISTS idx_merchants_onboarding_status
+  ON merchants (onboarding_status);
+

@@ -136,6 +136,9 @@ export default async function HomePage() {
   // This converts the raw orders array into usable numbers
   const stats = calculateOrderStats(orders, currency);
 
+  //calculateAlerts() scans every product for stock problems
+  // Returns: { outOfStock: [], criticalStock: [], lowStock: [], redZoneCount: number }
+  const alerts = calculateAlerts(products);
 
   // ── Step 5: Generate the AI briefing using Gemini ───────────────────────
   // We await this because the briefing needs to be ready before we render
@@ -144,6 +147,7 @@ export default async function HomePage() {
     shopName: shop_name || domain, // Use store name if available, otherwise domain
     currency,
     stats,
+    alerts, //Pass alert data so Gemini can mention specific products in danger.
   });
 
   // Log the briefing to Supabase for history tracking (fire and forget)
@@ -153,11 +157,6 @@ export default async function HomePage() {
 
 
   // ── Step 6: Calculate inventory stats ───────────────────────────────────
-  // Count products with no stock (every variant has 0 or negative quantity)
-  const outOfStock = products.filter(p =>
-    p.variants?.every(v => v.inventory_quantity <= 0)
-  ).length;
-
   // Calculate total inventory value (price × quantity for each product)
   const totalInventoryValue = products.reduce((sum, p) => {
     const price = parseFloat(p.variants?.[0]?.price || 0);  // Price of first variant
@@ -174,6 +173,18 @@ export default async function HomePage() {
     maximumFractionDigits: 0, // No decimal places for large numbers
   }).format(totalInventoryValue);
 
+    // Separate products into red zone vs normal for the inventory list
+  // Red zone = out of stock OR critically low (≤3 units)
+  const redZoneProducts = products.filter(p => {
+    const qty = p.variants?.reduce((q, v) => q + (v.inventory_quantity || 0), 0) || 0;
+    return qty <= 3; // 0, 1, 2, or 3 units = red zone
+  });
+
+  const healthyProducts = products.filter(p => {
+    const qty = p.variants?.reduce((q, v) => q + (v.inventory_quantity || 0), 0) || 0;
+    return qty > 3;
+  });
+
 
   // ── Step 7: Render the dashboard ────────────────────────────────────────
   return (
@@ -187,14 +198,19 @@ export default async function HomePage() {
             E
           </div>
           <span className="text-white font-bold text-lg tracking-tight">Effibooks</span>
-          {/* Green dot = live connection to Shopify */}
-          <span className="text-green-300 text-xs ml-1">● Live</span>
+          {/* LiveSyncBadge shows when the last webhook event arrived */}
+          <LiveSyncBadge supabase={supabase} domain={domain} />
         </div>
-        <div className="text-right">
-          <p className="text-white text-sm font-medium">{shop_name || domain}</p>
-          <p className="text-green-300 text-xs">{domain}</p>
+        <div className="flex items-center gap-4">
+          {/* ExportButton — downloads a CSV of orders for the accountant */}
+          <ExportButton orders={orders} stats={stats} currency={currency} shopName={shop_name || domain} />
+          <div className="text-right">
+            <p className="text-white text-sm font-medium">{shop_name || domain}</p>
+            <p className="text-green-300 text-xs">{domain}</p>
+          </div>
         </div>
       </header>
+
 
       <main className="max-w-5xl mx-auto px-6 py-8">
 
@@ -209,20 +225,29 @@ export default async function HomePage() {
           </div>
         )}
 
-        {/* ── Revenue Strip (Sprint 3 — new) ────────────────────────────── */}
-        {/* Shows today/week/30-day revenue + 7-day bar chart */}
+                {/* ── Alert Banner ───────────────────────────────── */}
+        {/* Only renders if there are products in the red zone */}
+        {alerts.redZoneCount > 0 && (
+          <AlertBanner alerts={alerts} />
+        )}
+
+        {/* Revenue overview */}
         <RevenueStrip stats={stats} currency={currency} />
 
-        {/* ── Inventory stat cards ──────────────────────────────────────── */}
+        {/* Inventory stat cards */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           {[
-            { label: 'Products',        value: products.length,          icon: '📦', alert: false },
-            { label: 'Out of Stock',    value: outOfStock,               icon: '⚠️', alert: outOfStock > 0 },
-            { label: 'Inventory Value', value: formattedInventoryValue,  icon: '💰', alert: false },
+            { label: 'Products',        value: products.length,              icon: '📦', alert: false },
+            {
+              label: 'Red Zone',
+              value: alerts.redZoneCount,      // NEW: uses alerts count instead of just outOfStock
+              icon:  '🚨',
+              alert: alerts.redZoneCount > 0,
+            },
+            { label: 'Inventory Value', value: formattedInventoryValue,      icon: '💰', alert: false },
           ].map(({ label, value, icon, alert }) => (
             <div key={label} className="bg-white border border-[#DDD6CE] rounded-xl p-5 shadow-sm">
               <div className="text-2xl mb-2">{icon}</div>
-              {/* Text goes red if alert=true (e.g. items are out of stock) */}
               <div className={`text-2xl font-bold mb-1 ${alert ? 'text-red-600' : 'text-[#1B4332]'}`}>
                 {value}
               </div>
@@ -230,6 +255,7 @@ export default async function HomePage() {
             </div>
           ))}
         </div>
+
 
         {/* ── AI Morning Brief ──────────────────────────────────────────── */}
         {/* Gemini-generated plain English summary */}
@@ -239,7 +265,7 @@ export default async function HomePage() {
         {/* Top sellers vs slow movers + P&L breakdown */}
         <SundayStatement orders={orders} currency={currency} />
 
-        {/* ── Inventory table ───────────────────────────────────────────── */}
+        {/* ── Inventory table red zone items are shown first ───────────────────────────────────────────── */}
         <div className="bg-white border border-[#DDD6CE] rounded-xl shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-[#DDD6CE] flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-800">
@@ -250,10 +276,27 @@ export default async function HomePage() {
             <SearchBar />
           </div>
 
-          {products.length > 0 ? (
-            // id="product-list" is used by SearchBar to find and filter rows
+    
+          {/* Red zone section — shown at the top if any products are critical */}
+          {redZoneProducts.length > 0 && (
+            <div className="border-b-2 border-red-200 bg-red-50">
+              <div className="px-6 py-2 flex items-center gap-2">
+                <span className="text-red-600 text-xs font-semibold uppercase tracking-wide">
+                  🚨 Red Zone — Needs immediate attention ({redZoneProducts.length})
+                </span>
+              </div>
+              <ul>
+                {redZoneProducts.map(p => (
+                  <ProductCard key={p.id} product={p} currency={currency} isRedZone={true} />
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Healthy products below the red zone */}
+          {healthyProducts.length > 0 ? (
             <ul id="product-list" className="divide-y divide-gray-100">
-              {products.map(p => (
+              {healthyProducts.map(p => (
                 <ProductCard key={p.id} product={p} currency={currency} />
               ))}
             </ul>
@@ -266,3 +309,4 @@ export default async function HomePage() {
     </div>
   );
 }
+      

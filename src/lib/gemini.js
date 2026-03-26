@@ -36,6 +36,7 @@ const GEMINI_API_URL =
 //   shopName  — store name string, shown in the prompt so AI knows the context
 //   currency  — currency code e.g. 'KES', 'USD'
 //   stats     — pre-calculated stats object from calculateOrderStats()
+//   alerts   — NEW in Sprint 4: from calculateAlerts() in alerts.js
 //
 // RETURNS: { text: "Your briefing text here...", error: null }
 //   If something goes wrong: { text: "user-friendly message", error: "technical detail" }
@@ -43,7 +44,7 @@ const GEMINI_API_URL =
 export async function generateBriefing(
   products,
   orders = [],
-  { shopName, currency = 'USD', stats = {} } = {}
+  { shopName, currency = 'USD', stats = {}, alerts = {} } = {}
 ) {
 
   // Get the API key from environment variables
@@ -167,62 +168,76 @@ Rules:
 // We NEVER send the full JSON arrays to Gemini — they're too large and
 // would cost more tokens. We extract just the key business signals.
 // ─────────────────────────────────────────────────────────────────────────────
-function buildDataSummary(products, orders, stats, currency) {
+function buildDataSummary(products, orders, stats, alerts, currency) {
 
-  // Helper to format a number as currency e.g. 1234.5 → "KES 1,234.50"
+  // Currency formatter — e.g. fmt(1234.5) → "KES 1,234.50"
   const fmt = (n) =>
     `${currency} ${Number(n || 0).toLocaleString('en', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+      minimumFractionDigits: 2, maximumFractionDigits: 2,
     })}`;
 
-  // Count out-of-stock products (where every variant has 0 or negative inventory)
-  const outOfStock = products.filter(p =>
-    p.variants?.every(v => v.inventory_quantity <= 0)
-  );
-
-  // Count low-stock products (1-5 units remaining across all variants)
-  const lowStock = products.filter(p => {
-    const qty = p.variants?.reduce((s, v) => s + (v.inventory_quantity || 0), 0) || 0;
-    return qty > 0 && qty <= 5; // More than 0 but 5 or fewer
-  });
-
-  // Build the text summary line by line
-  const lines = [
+  // ── Revenue section ──────────────────────────────────────────────────
+  const revenueLines = [
     '── REVENUE ──',
-    `Today: ${fmt(stats.todayRevenue)} (${stats.todayOrders || 0} orders)`,
-    `This week: ${fmt(stats.weekRevenue)}`,
-    `Last 30 days: ${fmt(stats.totalRevenue)} (${stats.totalOrders || 0} total orders)`,
-    `Average order value: ${fmt(stats.averageOrderValue)}`,
-    `Total refunds: ${fmt(stats.totalRefunds)}`,
-    '',
-    '── TOP SELLING PRODUCTS (last 30 days) ──',
-    // Map top products to text lines, or show "No sales yet" if empty
-    ...(stats.topProducts?.length > 0
-      ? stats.topProducts.map((p, i) =>
-          `${i + 1}. ${p.title} — ${p.quantity} units sold, ${fmt(p.revenue)} revenue`
-        )
-      : ['No sales data available yet']
-    ),
-    '',
-    '── SLOW MOVERS (2 or fewer sold in 30 days) ──',
-    ...(stats.slowMovers?.length > 0
-      ? stats.slowMovers.map(p => `- ${p.title}: only ${p.quantity} sold`)
-      : ['All products are selling well']
-    ),
-    '',
-    '── INVENTORY STATUS ──',
-    `Total products: ${products.length}`,
-    `Out of stock: ${outOfStock.length} products${outOfStock.length > 0
-      ? ` (${outOfStock.slice(0, 3).map(p => p.title).join(', ')})`
-      : ''
-    }`,
-    `Low stock: ${lowStock.length} products${lowStock.length > 0
-      ? ` (${lowStock.slice(0, 3).map(p => p.title).join(', ')})`
-      : ''
-    }`,
+    `Today:       ${fmt(stats.todayRevenue)} (${stats.todayOrders || 0} orders)`,
+    `This week:   ${fmt(stats.weekRevenue)}`,
+    `Last 30 days:${fmt(stats.totalRevenue)} (${stats.totalOrders || 0} orders total)`,
+    `Avg order:   ${fmt(stats.averageOrderValue)}`,
+    `Refunds:     ${fmt(stats.totalRefunds)}`,
   ];
 
-  // Join all lines with newlines and return as a single string
-  return lines.filter(l => l !== undefined).join('\n');
+  // ── Top sellers section ──────────────────────────────────────────────
+  const topSellerLines = [
+    '',
+    '── TOP SELLERS (30 days) ──',
+    ...(stats.topProducts?.length > 0
+      ? stats.topProducts.map((p, i) =>
+          `${i + 1}. ${p.title} — ${p.quantity} sold, ${fmt(p.revenue)}`
+        )
+      : ['No sales yet']
+    ),
+  ];
+
+  // ── Stock alerts section — NEW in Sprint 4 ───────────────────────────
+  // We now include specific product names so Gemini can reference them
+  const alertLines = [
+    '',
+    '── STOCK ALERTS ──',
+  ];
+
+  if (alerts.outOfStock?.length > 0) {
+    const names = alerts.outOfStock.map(p => p.title).join(', ');
+    alertLines.push(`OUT OF STOCK (${alerts.outOfStock.length}): ${names}`);
+  } else {
+    alertLines.push('Out of stock: none');
+  }
+
+  if (alerts.criticalStock?.length > 0) {
+    const items = alerts.criticalStock
+      .map(p => `${p.title} (${p.totalQty} left)`)
+      .join(', ');
+    alertLines.push(`CRITICAL ≤3 units (${alerts.criticalStock.length}): ${items}`);
+  }
+
+  if (alerts.lowStock?.length > 0) {
+    const items = alerts.lowStock
+      .map(p => `${p.title} (${p.totalQty} left)`)
+      .join(', ');
+    alertLines.push(`LOW 4-10 units (${alerts.lowStock.length}): ${items}`);
+  }
+
+  // ── Inventory summary ────────────────────────────────────────────────
+  const inventoryLines = [
+    '',
+    '── INVENTORY ──',
+    `Total products: ${products.length}`,
+  ];
+
+  // Combine all sections into one string
+  return [
+    ...revenueLines,
+    ...topSellerLines,
+    ...alertLines,
+    ...inventoryLines,
+  ].join('\n');
 }
