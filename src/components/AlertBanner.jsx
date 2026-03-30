@@ -29,89 +29,120 @@ export default function AlertBanner({ alerts }) {
   if (dismissed) return null;
 
   return (
-    <div className="mb-6 bg-red-50 border-2 border-red-200 rounded-xl overflow-hidden">
+    <div className="mb-6 rounded-xl overflow-hidden border border-red-200" style={{ background: '#FFF5F5' }}>
 
-      {/* ── Header bar ──────────────────────────────────────────────── */}
-      <div className="px-5 py-3 bg-red-100 border-b border-red-200 flex items-center justify-between">
+      {/* ── Header ──────────────────────────────────────────────────── */}
+      <div className="px-5 py-3 flex items-center justify-between" style={{ background: '#FEE2E2', borderBottom: '1px solid #FECACA' }}>
         <div className="flex items-center gap-2">
-          {/* Pulsing red dot — signals urgency */}
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+          {/* Pulsing red dot */}
+          <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: '#EF4444' }}></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5" style={{ background: '#EF4444' }}></span>
           </span>
-          <span className="text-red-800 text-sm font-semibold">
+          <span className="text-sm font-semibold" style={{ color: '#991B1B' }}>
             {alerts.redZoneCount} product{alerts.redZoneCount !== 1 ? 's' : ''} need immediate attention
           </span>
         </div>
-        {/* Dismiss button — hides the banner without refreshing the page */}
         <button
           onClick={() => setDismissed(true)}
-          className="text-red-400 hover:text-red-600 text-lg leading-none"
-          aria-label="Dismiss alert"
+          className="text-lg leading-none ml-4 flex-shrink-0"
+          style={{ color: '#F87171' }}
+          aria-label="Dismiss"
         >
           ✕
         </button>
       </div>
 
-      {/* ── Alert sections ────────────────────────────────────────── */}
-      <div className="px-5 py-4 flex flex-col gap-3">
+      {/* ── Alert rows — each on its own line for readability ─────── */}
+      <div className="px-5 py-4 flex flex-col gap-4">
 
-        {/* Out of stock section */}
+        {/* Out of stock */}
         {alerts.outOfStock.length > 0 && (
-          <div className="flex items-start gap-3">
-            {/* Badge showing count */}
-            <span className="bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5">
-              {alerts.outOfStock.length} OUT OF STOCK
-            </span>
-            {/* Product names */}
-            <div className="text-sm text-red-800">
-              {alerts.outOfStock.map((p, i) => (
-                <span key={p.id}>
-                  <strong>{p.title}</strong>
-                  {/* Add comma between items but not after the last one */}
-                  {i < alerts.outOfStock.length - 1 ? ', ' : ''}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+              <span
+                className="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0"
+                style={{ background: '#DC2626', color: '#FFFFFF' }}
+              >
+                {alerts.outOfStock.length} OUT OF STOCK
+              </span>
+              <span className="text-xs" style={{ color: '#7F1D1D' }}>
+                Customers cannot purchase these
+              </span>
+            </div>
+            {/* Product names on their own line, clearly visible */}
+            <div className="flex flex-wrap gap-2 ml-1">
+              {alerts.outOfStock.map(p => (
+                <span
+                  key={p.id}
+                  className="text-xs font-semibold px-2.5 py-1 rounded-lg"
+                  style={{ background: '#FEE2E2', color: '#991B1B', border: '1px solid #FECACA' }}
+                >
+                  {p.title}
                 </span>
               ))}
-              <span className="text-red-500 ml-1">— customers cannot purchase these</span>
             </div>
           </div>
         )}
 
-        {/* Critical stock section (1-3 units) */}
+        {/* Critical stock (1–3 units) */}
         {alerts.criticalStock.length > 0 && (
-          <div className="flex items-start gap-3">
-            <span className="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5">
-              {alerts.criticalStock.length} CRITICAL
-            </span>
-            <div className="text-sm text-red-800">
-              {alerts.criticalStock.map((p, i) => (
-                <span key={p.id}>
-                  <strong>{p.title}</strong>
-                  {/* Show exact unit count so merchant knows how urgent it is */}
-                  <span className="text-orange-600 ml-1">({p.totalQty} left)</span>
-                  {i < alerts.criticalStock.length - 1 ? ', ' : ''}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+              <span
+                className="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0"
+                style={{ background: '#EA580C', color: '#FFFFFF' }}
+              >
+                {alerts.criticalStock.length} CRITICAL
+              </span>
+              <span className="text-xs" style={{ color: '#7C2D12' }}>
+                Reorder today before you run out
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2 ml-1">
+              {alerts.criticalStock.map(p => (
+                <span
+                  key={p.id}
+                  className="text-xs font-semibold px-2.5 py-1 rounded-lg"
+                  style={{ background: '#FFF7ED', color: '#9A3412', border: '1px solid #FED7AA' }}
+                >
+                  {p.title}
+                  <span className="font-normal ml-1" style={{ color: '#EA580C' }}>
+                    ({p.totalQty} left)
+                  </span>
                 </span>
               ))}
-              <span className="text-red-500 ml-1">— reorder today</span>
             </div>
           </div>
         )}
 
-        {/* Low stock section (4-10 units) — shown if it exists */}
+        {/* Low stock (4–10 units) */}
         {alerts.lowStock.length > 0 && (
-          <div className="flex items-start gap-3">
-            <span className="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5">
-              {alerts.lowStock.length} LOW STOCK
-            </span>
-            <div className="text-sm text-amber-800">
-              {alerts.lowStock.map((p, i) => (
-                <span key={p.id}>
-                  <strong>{p.title}</strong>
-                  <span className="text-amber-600 ml-1">({p.totalQty} left)</span>
-                  {i < alerts.lowStock.length - 1 ? ', ' : ''}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+              <span
+                className="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0"
+                style={{ background: '#D97706', color: '#FFFFFF' }}
+              >
+                {alerts.lowStock.length} LOW STOCK
+              </span>
+              <span className="text-xs" style={{ color: '#78350F' }}>
+                Monitor this week
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2 ml-1">
+              {alerts.lowStock.map(p => (
+                <span
+                  key={p.id}
+                  className="text-xs font-semibold px-2.5 py-1 rounded-lg"
+                  style={{ background: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A' }}
+                >
+                  {p.title}
+                  <span className="font-normal ml-1" style={{ color: '#D97706' }}>
+                    ({p.totalQty} left)
+                  </span>
                 </span>
               ))}
-              <span className="text-amber-600 ml-1">— monitor this week</span>
             </div>
           </div>
         )}

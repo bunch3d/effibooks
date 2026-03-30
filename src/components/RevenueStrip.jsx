@@ -15,10 +15,19 @@
 
 export default function RevenueStrip({ stats, currency = 'USD' }) {
 
-  // If no orders exist yet, show a friendly placeholder instead of zeros
   if (!stats || stats.totalOrders === 0) {
     return (
-      <div className="mb-6 bg-white border border-[#DDD6CE] rounded-xl p-5 text-center text-gray-400 italic text-sm">
+      <div style={{
+        marginBottom: '24px',
+        background: '#FFFFFF',
+        border: '1px solid #DDD6CE',
+        borderRadius: '12px',
+        padding: '20px',
+        textAlign: 'center',
+        color: '#9CA3AF',
+        fontStyle: 'italic',
+        fontSize: '14px',
+      }}>
         No orders in the last 30 days. Revenue data will appear here once orders come in.
       </div>
     );
@@ -34,105 +43,129 @@ export default function RevenueStrip({ stats, currency = 'USD' }) {
 
   // The 4 metric tiles to show across the top
   const metrics = [
-    {
-      label:     'Today',
-      value:     fmt(stats.todayRevenue),
-      sub:       `${stats.todayOrders} orders`,  // Subtitle shows order count
-      highlight: true,  // Today's tile gets a darker background to stand out
-    },
-    {
-      label:     'This week',
-      value:     fmt(stats.weekRevenue),
-      sub:       'last 7 days',
-      highlight: false,
-    },
-    {
-      label:     'Last 30 days',
-      value:     fmt(stats.totalRevenue),
-      sub:       `${stats.totalOrders} orders`,
-      highlight: false,
-    },
-    {
-      label:     'Avg order',
-      value:     fmt(stats.averageOrderValue),
-      sub:       'per transaction',
-      highlight: false,
-    },
+    { label: 'Today',         value: fmt(stats.todayRevenue),      sub: `${stats.todayOrders} order${stats.todayOrders !== 1 ? 's' : ''}`, highlight: true  },
+    { label: 'This week',     value: fmt(stats.weekRevenue),       sub: 'last 7 days',                                                      highlight: false },
+    { label: 'Last 30 days',  value: fmt(stats.totalRevenue),      sub: `${stats.totalOrders} orders`,                                      highlight: false },
+    { label: 'Avg order',     value: fmt(stats.averageOrderValue), sub: 'per transaction',                                                   highlight: false },
   ];
 
-  // Find the highest day's revenue — used to scale the bar chart heights
-  // Math.max with spread operator gets the biggest value from the array
-  const maxRevenue = Math.max(
-    ...(stats.revenueByDay?.map(d => d.revenue) || [0]),
-    1 // Minimum of 1 to avoid dividing by zero when calculating bar heights
-  );
+  const maxRevenue = Math.max(...(stats.revenueByDay?.map(d => d.revenue) || [0]), 1);
 
   return (
-    <div className="mb-6 bg-[#1B4332] rounded-xl overflow-hidden shadow-sm">
+    <div style={{
+      marginBottom: '24px',
+      background: '#1B4332',
+      borderRadius: '12px',
+      overflow: 'hidden',
+    }}>
 
-      {/* ── Header bar ──────────────────────────────────────────────────── */}
-      <div className="px-6 pt-4 pb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-[#C9952A] text-sm">$</span>
-          <span className="text-[#D8F3DC] text-xs font-semibold uppercase tracking-widest">
+      {/* ── Header ──────────────────────────────────────────────────── */}
+      <div style={{
+        padding: '14px 24px 10px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ color: '#C9952A', fontSize: '15px' }}>$</span>
+          <span style={{
+            color: '#D8F3DC',
+            fontSize: '11px',
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+          }}>
             Revenue Overview
           </span>
         </div>
-        <span className="text-[#2D6A4F] text-xs">Last 30 days</span>
+        <span style={{ color: '#4ADE80', fontSize: '11px' }}>Last 30 days</span>
       </div>
 
-      {/* ── 4 metric tiles ──────────────────────────────────────────────── */}
-      {/* grid-cols-4 puts all 4 tiles in a row */}
-      <div className="grid grid-cols-4 gap-0 border-b border-[#2D6A4F]">
-        {metrics.map(({ label, value, sub, highlight }) => (
+      {/* ── 4 metric tiles ──────────────────────────────────────────── */}
+      {/* Using inline CSS grid — Tailwind grid classes were being purged */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        borderTop: '1px solid #2D6A4F',
+        borderBottom: '1px solid #2D6A4F',
+      }}>
+        {metrics.map(({ label, value, sub, highlight }, i) => (
           <div
             key={label}
-            // Highlighted tile (Today) gets slightly darker background
-            className={`px-6 py-4 border-r border-[#2D6A4F] last:border-r-0 ${highlight ? 'bg-[#2D6A4F]' : ''}`}
+            style={{
+              padding: '16px 20px',
+              background: highlight ? '#2D6A4F' : 'transparent',
+              borderRight: i < 3 ? '1px solid #2D6A4F' : 'none',
+            }}
           >
-            <div className="text-xs text-[#86efac] mb-1 uppercase tracking-wide">{label}</div>
-            <div className="text-xl font-bold text-white mb-0.5">{value}</div>
-            <div className="text-xs text-[#6EE7B7]">{sub}</div>
+            {/* Label — e.g. "TODAY" — was invisible before fix */}
+            <div style={{
+              color: '#86EFAC',       // Bright green — visible on dark background
+              fontSize: '11px',
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              marginBottom: '6px',
+            }}>
+              {label}
+            </div>
+            {/* Main value — e.g. "KES 2,561" */}
+            <div style={{
+              color: '#FFFFFF',
+              fontSize: '20px',
+              fontWeight: '700',
+              marginBottom: '4px',
+              letterSpacing: '-0.02em',
+            }}>
+              {value}
+            </div>
+            {/* Subtitle — e.g. "1 order" */}
+            <div style={{
+              color: '#6EE7B7',   // Lighter green — still readable
+              fontSize: '12px',
+            }}>
+              {sub}
+            </div>
           </div>
         ))}
       </div>
 
-      {/* ── 7-day sparkline bar chart ─────────────────────────────────── */}
+      {/* ── 7-day bar chart ─────────────────────────────────────────── */}
       {stats.revenueByDay?.length > 0 && (
-        <div className="px-6 py-4">
-          <div className="text-xs text-[#2D6A4F] mb-3 uppercase tracking-wide">7-day trend</div>
-
-          {/* Bar chart container — h-12 = 48px tall */}
-          <div className="flex items-end gap-1.5 h-12">
+        <div style={{ padding: '16px 24px' }}>
+          <div style={{
+            color: '#4ADE80',
+            fontSize: '11px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            marginBottom: '10px',
+          }}>
+            7-day trend
+          </div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'flex-end',
+            gap: '6px',
+            height: '48px',
+          }}>
             {stats.revenueByDay.map((day) => {
-              // Calculate bar height as percentage of the tallest bar
               const heightPct = (day.revenue / maxRevenue) * 100;
-
-              // Check if this bar is for today
-              const isToday = day.date === new Date().toISOString().split('T')[0];
-
+              const isToday   = day.date === new Date().toISOString().split('T')[0];
               return (
                 <div
                   key={day.date}
-                  className="flex flex-col items-center gap-1 flex-1"
-                  title={`${day.label}: ${fmt(day.revenue)}`} // Tooltip on hover
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1 }}
+                  title={`${day.label}: ${fmt(day.revenue)}`}
                 >
-                  {/* The bar itself */}
-                  <div
-                    className="w-full rounded-sm"
-                    style={{
-                      height:     `${Math.max(heightPct, 4)}%`, // Min 4% so bar is always visible
-                      minHeight:  3,                             // Always at least 3px tall
-                      // Today = amber/gold, has revenue = green, no revenue = dark green
-                      background: isToday
-                        ? '#C9952A'
-                        : day.revenue > 0
-                          ? '#86efac'
-                          : '#2D6A4F',
-                    }}
-                  />
-                  {/* Day label below bar e.g. "Mon" */}
-                  <span className="text-[9px] text-[#2D6A4F]">{day.label}</span>
+                  <div style={{
+                    width:      '100%',
+                    height:     `${Math.max(heightPct, 5)}%`,
+                    minHeight:  '3px',
+                    background: isToday ? '#C9952A' : day.revenue > 0 ? '#86EFAC' : '#2D6A4F',
+                    borderRadius: '2px',
+                  }} />
+                  {/* Day label — e.g. "Mon" */}
+                  <span style={{ fontSize: '10px', color: '#4ADE80' }}>{day.label}</span>
                 </div>
               );
             })}
@@ -140,15 +173,14 @@ export default function RevenueStrip({ stats, currency = 'USD' }) {
         </div>
       )}
 
-      {/* ── Refund warning (only shows if refunds exist) ─────────────────── */}
+      {/* ── Refund warning ──────────────────────────────────────────── */}
       {stats.totalRefunds > 0 && (
-        <div className="px-6 pb-4">
-          <span className="text-xs text-amber-300">
+        <div style={{ padding: '0 24px 14px' }}>
+          <span style={{ fontSize: '12px', color: '#FCD34D' }}>
             ⚠️ {new Intl.NumberFormat('en', { style: 'currency', currency }).format(stats.totalRefunds)} refunded in the last 30 days
           </span>
         </div>
       )}
-
     </div>
   );
 }

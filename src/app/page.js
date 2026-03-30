@@ -28,11 +28,16 @@ import SearchBar        from '@/components/SearchBar';
 import BriefingCard     from '@/components/BriefingCard';
 import RevenueStrip     from '@/components/RevenueStrip';
 import SundayStatement  from '@/components/SundayStatement';
+import AlertBanner from '@/components/AlertBanner';
+import LiveSyncBadge from '@/components/LiveSyncBadge';
+import ExportButton from '@/components/ExportButton';
 
 // Our library functions (each in src/lib/)
 import { generateBriefing }                   from '@/lib/gemini';
 import { logSync, logBriefing }               from '@/lib/analytics';
 import { getOrders, calculateOrderStats }     from '@/lib/orders';
+import { calculateAlerts }                      from '@/lib/alerts';
+
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -199,7 +204,7 @@ export default async function HomePage() {
           </div>
           <span className="text-white font-bold text-lg tracking-tight">Effibooks</span>
           {/* LiveSyncBadge shows when the last webhook event arrived */}
-          <LiveSyncBadge supabase={supabase} domain={domain} />
+          <LiveSyncBadge domain={domain} />
         </div>
         <div className="flex items-center gap-4">
           {/* ExportButton — downloads a CSV of orders for the accountant */}

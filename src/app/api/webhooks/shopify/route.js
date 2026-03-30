@@ -187,15 +187,18 @@ async function handleOrderCreated(supabase, shop, order) {
   console.info(`[Webhook] ✓ Order ${order.name} saved for ${shop}`);
 
   //Also log to sync_logs so LiveSyncBadge can show "Synced just now"
+ try {
   await supabase.from('sync_logs').insert({
-    shop_domain: shop,
-    sync_type:      'webhook_order',  // Different from 'products' so we can distinguish
+    shop_domain:    shop,
+    sync_type:      'webhook_order',
     records_synced: 1,
     status:         'success',
     error_message:  null,
-    synced_at:   new Date().toISOString(),
-  }).catch(e => console.warn('[Webhook] Failed to log sync in sync_logs:', e.message));
-  // Using .catch() instead of try /catch because this log is non-critical
+    synced_at:      new Date().toISOString(),
+  });
+} catch (e) {
+  console.warn('[Webhook] sync_logs insert failed:', e.message);
+}
 }
 
 

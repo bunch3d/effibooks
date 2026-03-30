@@ -43,15 +43,8 @@ export default function ExportButton({ orders, stats, currency = 'USD', shopName
 
     // Row 1: Headers — these become the column names in Excel/Google Sheets
     const headers = [
-      'Order Number',
-      'Date',
-      'Financial Status',
-      'Gross Amount',
-      'Discount',
-      'Refund',
-      'Net Amount',
-      'Currency',
-      'Products',
+      'Order Number', 'Date', 'Financial Status',
+      'Gross Amount', 'Discount', 'Refund', 'Net Amount', 'Currency', 'Products',
     ];
 
     // Build one row per order
@@ -136,17 +129,40 @@ export default function ExportButton({ orders, stats, currency = 'USD', shopName
     URL.revokeObjectURL(url);          // Free the memory used by the blob
   };
 
+  const hasOrders = orders && orders.length > 0;
 
   return (
     <button
       onClick={handleExport}
-      disabled={!orders || orders.length === 0} // Disable if no orders to export
-      className="flex items-center gap-2 px-4 py-2 bg-white bg-opacity-10 hover:bg-opacity-20 border border-white border-opacity-20 rounded-lg text-white text-sm font-medium transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-      title={orders?.length === 0 ? 'No orders to export' : `Export ${orders?.length} orders as CSV`}
+      disabled={!hasOrders}
+      // FIX: solid amber background so it's visible on the dark green nav
+      style={{
+        display:        'flex',
+        alignItems:     'center',
+        gap:            '7px',
+        padding:        '8px 16px',
+        background:     hasOrders ? '#C9952A' : 'rgba(255,255,255,0.15)',
+        color:          '#FFFFFF',        // Always white text
+        border:         'none',
+        borderRadius:   '8px',
+        fontSize:       '13px',
+        fontWeight:     '600',
+        cursor:         hasOrders ? 'pointer' : 'not-allowed',
+        opacity:        hasOrders ? 1 : 0.5,
+        transition:     'background 0.15s',
+        fontFamily:     'inherit',
+        whiteSpace:     'nowrap',
+      }}
+      onMouseEnter={e => { if (hasOrders) e.currentTarget.style.background = '#B8841F'; }}
+      onMouseLeave={e => { if (hasOrders) e.currentTarget.style.background = '#C9952A'; }}
+      title={hasOrders ? `Export ${orders.length} orders as CSV` : 'No orders to export'}
     >
-      {/* Download arrow icon (SVG, no external library needed) */}
+      {/* Download icon */}
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-        <path d="M7 1v8M4 6l3 3 3-3M2 11h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M7 1v8M4 6l3 3 3-3M2 11h10"
+          stroke="currentColor" strokeWidth="1.8"
+          strokeLinecap="round" strokeLinejoin="round"
+        />
       </svg>
       Export CSV
     </button>

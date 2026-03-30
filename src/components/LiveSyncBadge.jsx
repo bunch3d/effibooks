@@ -19,9 +19,10 @@
  * NOTE: This is a client component ('use client') because it uses
  * useState and useEffect for the live-updating time display.
  */
+import { createClient } from '@/utils/supabase';
+
 
 import { useState, useEffect } from 'react';
-
 export default function LiveSyncBadge({ supabase, domain }) {
 
   // lastSynced: stores the ISO timestamp string of the last sync
@@ -34,6 +35,7 @@ export default function LiveSyncBadge({ supabase, domain }) {
   // fetchLastSync — queries sync_logs for the most recent entry for this shop
   const fetchLastSync = async () => {
     try {
+      const supabase = createClient(); // Create client inside the function
       const { data, error } = await supabase
         .from('sync_logs')              // The sync_logs table from SCHEMA.sql Block 2
         .select('synced_at')            // Only need the timestamp
