@@ -23,7 +23,7 @@ const STEPS = [
   { id: "ready",   label: "Initial analysis complete",           delay: 3800 },
 ];
 
-export default function SuccessContent() {
+function SuccessContent() {
   const searchParams = useSearchParams();
   const shop = searchParams.get("shop") || "your-store.myshopify.com";
   const name = decodeURIComponent(searchParams.get("name") || shop);
