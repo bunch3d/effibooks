@@ -12,7 +12,7 @@
  * 3. Transitions to "Next Step: Connect Stripe" after 3 seconds
  */
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 const STEPS = [
@@ -23,7 +23,7 @@ const STEPS = [
   { id: "ready",   label: "Initial analysis complete",           delay: 3800 },
 ];
 
-export default function OnboardingSuccess() {
+export default function SuccessContent() {
   const searchParams = useSearchParams();
   const shop = searchParams.get("shop") || "your-store.myshopify.com";
   const name = decodeURIComponent(searchParams.get("name") || shop);
@@ -162,4 +162,13 @@ export default function OnboardingSuccess() {
       </div>
     </div>
   );
+}
+
+//Page export is now this function, not the default SuccessContent, to avoid confusion with the main export of this file.
+export default function OnboardingSuccess() {
+  return(
+    <Suspense fallback={<div>Loading...</div>}>
+      <SuccessContent />
+    </Suspense>
+  )
 }
