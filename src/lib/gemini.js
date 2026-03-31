@@ -103,7 +103,7 @@ Rules:
           // Controls how the AI generates text
           generationConfig: {
             temperature:      0.4,  // Lower = more consistent, factual output (0=robotic, 1=creative)
-            maxOutputTokens:  3000,  // Max length of response (~300 words). Increase if briefing cuts off.
+            maxOutputTokens:  5000,  // Max length of response (~300 words). Increase if briefing cuts off.
             topP:             0.8,  // Focuses the AI on likely words — keeps it on-topic
           },
         }),
