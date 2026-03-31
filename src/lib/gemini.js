@@ -22,7 +22,7 @@
 // gemini-3-flash-preview = the specific model (fast + high free quota)
 // generateContent = the action (generate text from a prompt)
 const GEMINI_API_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 
 // ─────────────────────────────────────────────────────────────────────────────
